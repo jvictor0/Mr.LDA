@@ -31,6 +31,19 @@ public class Document implements Writable, Cloneable, Serializable {
    */
   private double[] gamma = null;
 
+    private long title = -1;
+    
+    public void setTitle(long title)
+    {
+	this.title = title;
+    }
+
+    public long getTitle()
+    {
+	return title;
+    }
+
+
   /**
    * Define the total number of words in this document, not necessarily distinct.
    */
@@ -147,6 +160,7 @@ public class Document implements Writable, Cloneable, Serializable {
   public void readFields(DataInput in) throws IOException {
     numberOfTokens = 0;
 
+    title = in.readLong();
     int numEntries = in.readInt();
     if (numEntries <= 0) {
       content = null;
@@ -239,6 +253,7 @@ public class Document implements Writable, Cloneable, Serializable {
    * @param out where to write the raw byte representation
    */
   public void write(DataOutput out) throws IOException {
+      out.writeLong(title);
     // Write out the number of entries in the map.
     if (content == null) {
       out.writeInt(0);

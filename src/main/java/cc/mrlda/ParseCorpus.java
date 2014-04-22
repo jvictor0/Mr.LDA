@@ -592,6 +592,7 @@ public class ParseCorpus extends Configured implements Tool {
       reporter.incrCounter(MyCounter.LEFT_OVER_DOCUMENTS, 1);
       index.set(titleIndex.get(key.toString()));
       document.setDocument(content);
+      document.setTitle(Long.parseLong(key.toString()));
       output.collect(index, document);
     }
 

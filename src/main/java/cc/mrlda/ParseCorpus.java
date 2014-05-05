@@ -98,7 +98,10 @@ public class ParseCorpus extends Configured implements Tool {
 
     // Delete the output directory if it exists already
     FileSystem fs = FileSystem.get(new JobConf(configuration, ParseCorpus.class));
-    fs.delete(new Path(outputPath), true);
+    {
+	Process p = Runtime.getRuntime().exec("hadoop fs -rm -r " + outputPath);
+	p.waitFor();
+    }
 
     try {
       int[] corpusStatistics = tokenizeDocument(configuration, inputPath, indexPath, stopwordPath,
@@ -134,7 +137,9 @@ public class ParseCorpus extends Configured implements Tool {
       Path documentPath = indexDocument(configuration, documentGlobString, documentString,
           termIndexPath.toString(), titleIndexPath.toString(), numberOfMappers);
     } finally {
-      fs.delete(new Path(indexPath), true);
+	Process p = Runtime.getRuntime().exec("hadoop fs -rm -r " + indexPath);
+	p.waitFor();
+	//fs.delete(new Path(indexPath), true);
     }
 
     return 0;
@@ -439,7 +444,11 @@ public class ParseCorpus extends Configured implements Tool {
     } finally {
       IOUtils.closeStream(sequenceFileReader);
       IOUtils.closeStream(sequenceFileWriter);
-      fs.delete(new Path(outputTitleFile), true);
+      {
+	  Process p = Runtime.getRuntime().exec("hadoop fs -rm -r " + outputTitleFile);
+	  p.waitFor();
+      }
+      //      fs.delete(new Path(outputTitleFile), true);
     }
 
     return titleIndexPath;
@@ -525,7 +534,11 @@ public class ParseCorpus extends Configured implements Tool {
     String outputString = outputTermFile.getParent() + Path.SEPARATOR + Settings.TEMP
         + FileMerger.generateRandomString();
     Path outputPath = new Path(outputString);
-    fs.delete(outputPath, true);
+    {
+	Process p = Runtime.getRuntime().exec("hadoop fs -rm -r " + outputPath);
+	p.waitFor();
+    }
+    //    fs.delete(outputPath, true);
 
     FileInputFormat.setInputPaths(conf, inputTermFiles);
     FileOutputFormat.setOutputPath(conf, outputPath);
@@ -552,7 +565,10 @@ public class ParseCorpus extends Configured implements Tool {
       int leftOverTerms = (int) counters.findCounter(MyCounter.LEFT_OVER_TERMS).getCounter();
       sLogger.info("Total number of left-over terms: " + leftOverTerms);
     } finally {
-      fs.delete(outputPath, true);
+	Process p = Runtime.getRuntime().exec("hadoop fs -rm -r " + outputPath);
+	p.waitFor();
+
+	//      fs.delete(outputPath, true);
     }
 
     return outputTermFile;

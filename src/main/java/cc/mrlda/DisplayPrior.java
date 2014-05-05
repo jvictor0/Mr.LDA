@@ -2,7 +2,7 @@ package cc.mrlda;
 
 import java.io.IOException;
 import java.util.Iterator;
-
+import edu.umd.cloud9.io.map.HMapIDW;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -20,6 +20,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -30,8 +31,9 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.commons.math3.special.Gamma;
 import org.apache.commons.lang.text.StrBuilder;
-import edu.umd.cloud9.util.map.HMapII;
+
 import cc.mrlda.ParseCorpus.MyCounter;
 
 import com.google.common.base.Preconditions;
@@ -39,13 +41,13 @@ import com.google.common.base.Preconditions;
 import edu.umd.cloud9.io.pair.PairOfIntFloat;
 import edu.umd.cloud9.io.pair.PairOfInts;
 
-public class DisplayDocument extends Configured implements Tool {
+public class DisplayPrior extends Configured implements Tool {
     @SuppressWarnings("unchecked")
     public int run(String[] args) throws Exception 
     {
 
 
-	Job job = new Job(getConf(), "DisplayDocument");
+	Job job = new Job(getConf(), "DisplayPrior");
 	job.setJarByClass(Document.class);
 	job.setMapOutputValueClass(Text.class);
 	
@@ -62,9 +64,6 @@ public class DisplayDocument extends Configured implements Tool {
 			  .withDescription("input document directory").create(Settings.INPUT_OPTION));
 	options.addOption(OptionBuilder.withArgName(Settings.PATH_INDICATOR).hasArg()
 			  .withDescription("output document directory").create(Settings.OUTPUT_OPTION));
-	options.addOption(OptionBuilder.withArgName(Settings.INTEGER_INDICATOR).hasArg()
-			  .withDescription("number of mappers").create(Settings.MAPPER_OPTION));
-
 	job.setNumReduceTasks(0); // no reducers cause I'm cool like dat
 
 	
@@ -76,11 +75,9 @@ public class DisplayDocument extends Configured implements Tool {
 	HelpFormatter formatter = new HelpFormatter();
 	try {
 	    CommandLine line = parser.parse(options, args);
-
-	    //	    job.setNumMapTasks(Integer.parseInt(line.getOptionValue(Settings.MAPPER_OPTION)));
 	    
 	    if (line.hasOption(Settings.HELP_OPTION)) {
-		formatter.printHelp(DisplayDocument.class.getName(), options);
+		formatter.printHelp(DisplayPrior.class.getName(), options);
 		System.exit(0);
 	    }
 	    
@@ -96,7 +93,7 @@ public class DisplayDocument extends Configured implements Tool {
 	    }
 	} catch (ParseException pe) {
 	    System.err.println(pe.getMessage());
-	    formatter.printHelp(DisplayDocument.class.getName(), options);
+	    formatter.printHelp(DisplayPrior.class.getName(), options);
 	    System.exit(0);
 	} catch (NumberFormatException nfe) {
 	    System.err.println(nfe.getMessage());
@@ -114,47 +111,27 @@ public class DisplayDocument extends Configured implements Tool {
 	return 0;
     }
 
-  public static class Map extends Mapper<IntWritable, Document, IntWritable, Text> 
+  public static class Map extends Mapper<IntWritable, DoubleWritable, Text, Text> 
   {
       private Text textOut = new Text();
 
       @Override
-      public void map(IntWritable key, Document value, Context context) 
+      public void map(IntWritable key, DoubleWritable value, Context context) 
 	  throws IOException, InterruptedException 
       {
 	  StrBuilder builder = new StrBuilder();
-	  if (value.getGamma() != null)
-	  {
-	      builder.append(value.getTitle());
-	      for (int i = 0; i < value.getNumberOfTopics(); i++) 
-	      {
-		  builder.append(' ');
-		  builder.append(value.getGamma()[i]);
-	      }
-	      textOut.set(builder.toString());
-	      context.write(null, textOut);
-	  } 
-	  else
-	  {
-	      HMapII content = value.getContent();
-	      Iterator<Integer> itr = content.keySet().iterator();
-	      while (itr.hasNext()) 
-	      {
-		  int id = itr.next();
-		  builder.clear();
-		  builder.append(value.getTitle()); builder.append(' ');
-		  builder.append(id); builder.append(' ');
-		  builder.append(value.getContent().get(id));
-		  textOut.set(builder.toString());
-		  context.write(null, textOut);
-	      }
+	  
+	  builder.append(key.get());
+	  builder.append(' ');
+	  builder.append(Math.log(Gamma.gamma(1 + value.get())));
 
-	  }
+	  textOut.set(builder.toString());
+	  context.write(null, textOut);
       }
   }
   
   public static void main(String[] args) throws Exception {
-      int res = ToolRunner.run(new Configuration(), new DisplayDocument(), args);
+      int res = ToolRunner.run(new Configuration(), new DisplayPrior(), args);
       System.exit(res);
   }
 }

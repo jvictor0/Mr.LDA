@@ -2,7 +2,7 @@ package cc.mrlda;
 
 import java.io.IOException;
 import java.util.Iterator;
-
+import edu.umd.cloud9.io.map.HMapIDW;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -31,7 +31,7 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.commons.lang.text.StrBuilder;
-import edu.umd.cloud9.util.map.HMapII;
+
 import cc.mrlda.ParseCorpus.MyCounter;
 
 import com.google.common.base.Preconditions;
@@ -39,13 +39,13 @@ import com.google.common.base.Preconditions;
 import edu.umd.cloud9.io.pair.PairOfIntFloat;
 import edu.umd.cloud9.io.pair.PairOfInts;
 
-public class DisplayDocument extends Configured implements Tool {
+public class DisplayBeta extends Configured implements Tool {
     @SuppressWarnings("unchecked")
     public int run(String[] args) throws Exception 
     {
 
 
-	Job job = new Job(getConf(), "DisplayDocument");
+	Job job = new Job(getConf(), "DisplayBeta");
 	job.setJarByClass(Document.class);
 	job.setMapOutputValueClass(Text.class);
 	
@@ -62,9 +62,6 @@ public class DisplayDocument extends Configured implements Tool {
 			  .withDescription("input document directory").create(Settings.INPUT_OPTION));
 	options.addOption(OptionBuilder.withArgName(Settings.PATH_INDICATOR).hasArg()
 			  .withDescription("output document directory").create(Settings.OUTPUT_OPTION));
-	options.addOption(OptionBuilder.withArgName(Settings.INTEGER_INDICATOR).hasArg()
-			  .withDescription("number of mappers").create(Settings.MAPPER_OPTION));
-
 	job.setNumReduceTasks(0); // no reducers cause I'm cool like dat
 
 	
@@ -76,11 +73,9 @@ public class DisplayDocument extends Configured implements Tool {
 	HelpFormatter formatter = new HelpFormatter();
 	try {
 	    CommandLine line = parser.parse(options, args);
-
-	    //	    job.setNumMapTasks(Integer.parseInt(line.getOptionValue(Settings.MAPPER_OPTION)));
 	    
 	    if (line.hasOption(Settings.HELP_OPTION)) {
-		formatter.printHelp(DisplayDocument.class.getName(), options);
+		formatter.printHelp(DisplayBeta.class.getName(), options);
 		System.exit(0);
 	    }
 	    
@@ -96,7 +91,7 @@ public class DisplayDocument extends Configured implements Tool {
 	    }
 	} catch (ParseException pe) {
 	    System.err.println(pe.getMessage());
-	    formatter.printHelp(DisplayDocument.class.getName(), options);
+	    formatter.printHelp(DisplayBeta.class.getName(), options);
 	    System.exit(0);
 	} catch (NumberFormatException nfe) {
 	    System.err.println(nfe.getMessage());
@@ -114,47 +109,37 @@ public class DisplayDocument extends Configured implements Tool {
 	return 0;
     }
 
-  public static class Map extends Mapper<IntWritable, Document, IntWritable, Text> 
+  public static class Map extends Mapper<PairOfIntFloat, HMapIDW, Text, Text> 
   {
       private Text textOut = new Text();
 
       @Override
-      public void map(IntWritable key, Document value, Context context) 
+      public void map(PairOfIntFloat key, HMapIDW hashMap, Context context) 
 	  throws IOException, InterruptedException 
       {
 	  StrBuilder builder = new StrBuilder();
-	  if (value.getGamma() != null)
+	  
+	  int topicIndex = key.getLeftElement();
+	  double logNormalizer = key.getRightElement();
+	  Iterator<Integer> itr = hashMap.keySet().iterator();
+	  while (itr.hasNext()) 
 	  {
-	      builder.append(value.getTitle());
-	      for (int i = 0; i < value.getNumberOfTopics(); i++) 
-	      {
-		  builder.append(' ');
-		  builder.append(value.getGamma()[i]);
-	      }
+	      builder.clear();
+	      int termIndex = itr.next();
+	      double logBetaValue = hashMap.get(termIndex) - logNormalizer;
+	      
+	      builder.append(termIndex);  builder.append(' ');
+	      builder.append(topicIndex);  builder.append(' ');
+	      builder.append(logBetaValue);
+
 	      textOut.set(builder.toString());
 	      context.write(null, textOut);
-	  } 
-	  else
-	  {
-	      HMapII content = value.getContent();
-	      Iterator<Integer> itr = content.keySet().iterator();
-	      while (itr.hasNext()) 
-	      {
-		  int id = itr.next();
-		  builder.clear();
-		  builder.append(value.getTitle()); builder.append(' ');
-		  builder.append(id); builder.append(' ');
-		  builder.append(value.getContent().get(id));
-		  textOut.set(builder.toString());
-		  context.write(null, textOut);
-	      }
-
 	  }
       }
   }
   
   public static void main(String[] args) throws Exception {
-      int res = ToolRunner.run(new Configuration(), new DisplayDocument(), args);
+      int res = ToolRunner.run(new Configuration(), new DisplayBeta(), args);
       System.exit(res);
   }
 }

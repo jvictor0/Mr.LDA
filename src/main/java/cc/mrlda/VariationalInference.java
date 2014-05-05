@@ -111,7 +111,10 @@ public class VariationalInference extends Configured implements Tool {
     // delete the overall output path
     Path outputDir = new Path(outputPath);
     if (!resume && fs.exists(outputDir)) {
-      fs.delete(outputDir, true);
+	//      fs.delete(outputDir, true);
+	Process p = Runtime.getRuntime().exec("hadoop fs -rm -r " + outputDir);
+	p.waitFor();
+
       fs.mkdirs(outputDir);
     }
 
@@ -127,7 +130,13 @@ public class VariationalInference extends Configured implements Tool {
     Path tempDir = new Path(outputPath + Settings.TEMP + FileMerger.generateRandomString());
 
     // delete the output directory if it exists already
-    fs.delete(tempDir, true);
+    {
+    //    fs.delete(tempDir, true);
+
+	Process p = Runtime.getRuntime().exec("hadoop fs -rm -r " + tempDir);
+	p.waitFor();
+    }
+
 
     Path alphaDir = null;
     Path betaDir = null;
@@ -322,7 +331,7 @@ public class VariationalInference extends Configured implements Tool {
           sLogger.info("Successfully export new alpha vector to file " + alphaDir);
         } finally {
           // remove all the alpha sufficient statistics
-          fs.deleteOnExit(alphaSufficientStatisticsDir);
+	    //fs.deleteOnExit(alphaSufficientStatisticsDir);
 
           IOUtils.closeStream(sequenceFileReader);
           IOUtils.closeStream(sequenceFileWriter);
@@ -377,7 +386,10 @@ public class VariationalInference extends Configured implements Tool {
 
           if (iterationCount != 0) {
             // remove old gamma and document output
-            fs.delete(gammaDir, true);
+	      //            fs.delete(gammaDir, true);
+	      Process p = Runtime.getRuntime().exec("hadoop fs -rm -r " + gammaDir);
+	      p.waitFor();
+
           }
         }
 
@@ -392,7 +404,10 @@ public class VariationalInference extends Configured implements Tool {
         iterationCount++;
       } finally {
         // delete the output directory after job
-        fs.delete(tempDir, true);
+	  //        fs.delete(tempDir, true);
+	  Process p = Runtime.getRuntime().exec("hadoop fs -rm -r " + tempDir);
+	  p.waitFor();
+
       }
 
     } while (iterationCount < numberOfIterations);

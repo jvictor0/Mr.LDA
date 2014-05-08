@@ -11,3 +11,5 @@ lib/
 .DS_Store
 .svn/
 */.svn/
+\#*
+*.bak
